@@ -43,11 +43,15 @@ export function applyGate(army, door, multiplier = 1) {
     case 'mul':
       army.multiply(door.value * multiplier);
       break;
+    // Une porte malus ne doit jamais terminer la run à elle seule : elle punit,
+    // elle n'exécute pas. Perdre sa dernière unité reste réservé aux combats
+    // perdus et aux généraux.
     case 'sub':
-      army.remove(door.value);
+      army.remove(Math.min(door.value, Math.max(0, army.count - 1)));
       break;
     case 'div':
       army.multiply(1 / door.value);
+      if (army.count < 1) army.add(1, 'panda');
       break;
     default:
       break;

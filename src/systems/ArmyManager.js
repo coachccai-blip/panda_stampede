@@ -178,7 +178,10 @@ export class ArmyManager {
   layout() {
     this.touch();
     const n = this.count;
-    this._spread = 22 + 10.5 * Math.sqrt(Math.max(n - 1, 0));
+    // Coefficient calibré pour que la piste pleine largeur plafonne l'armée
+    // autour de 800 unités, et un passage étroit autour de 300 : assez pour
+    // que la masse se sente, pas assez pour transformer un couloir en mur.
+    this._spread = 22 + 8 * Math.sqrt(Math.max(n - 1, 0));
     if (!n) return;
     const spread = this._spread;
     const units = this.units;

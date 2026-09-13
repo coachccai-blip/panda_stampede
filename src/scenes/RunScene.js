@@ -23,7 +23,7 @@ import { StyleManager } from '../systems/StyleManager.js';
 import { ComboSystem } from '../systems/ComboSystem.js';
 import { ChiSystem, CHI_GAINS } from '../systems/ChiSystem.js';
 import { FormationChecker, SHAPE_LABELS } from '../systems/FormationChecker.js';
-import { buildLevel } from '../systems/WaveSpawner.js';
+import { buildLevel, makeEnemyUnits } from '../systems/WaveSpawner.js';
 
 import { Panda } from '../entities/Panda.js';
 import { Boss } from '../entities/Boss.js';
@@ -40,6 +40,7 @@ const SLOWMO_RANGE = 1000;
 const SLOWMO_MS = 750;
 const SLOWMO_SCALE = 0.45;
 const DECISION_RANGE = 1600;
+const HP_PER_UNIT = 20;
 
 const ARMY_MILESTONES = [25, 50, 100, 200, 400];
 const DIVERSITY_MILESTONES = {
@@ -69,6 +70,9 @@ export class RunScene extends Phaser.Scene {
     const save = Save.get();
     this.save = save;
     this.rng = new Rng(this.seed);
+    // Générateur séparé pour le purement cosmétique (disposition des foules) :
+    // il ne doit pas décaler les tirages de jeu, qui décident des ralliements.
+    this.fxRng = new Rng(this.seed ^ 0x9e3779b9);
 
     this.meta = {
       handling: Save.upgradeEffect('handling'),
@@ -369,6 +373,13 @@ export class RunScene extends Phaser.Scene {
       if (i === this.eventCursor) this.eventCursor++;
     }
 
+    // Cadrage des effectifs ennemis, une seule fois, bien avant d'être lisible.
+    for (let i = this.eventCursor; i < events.length; i++) {
+      const rel = events[i].z - this.distance;
+      if (rel > EVENT_FAR) break;
+      if (events[i].type === 'encounter' && !events[i].scaled) this.scaleEncounter(events[i]);
+    }
+
     const next = this.nextEncounter();
     if (next) {
       const rel = next.z - this.distance;
@@ -403,6 +414,29 @@ export class RunScene extends Phaser.Scene {
     if (!tense) return;
     this.slowmoUntil = time + SLOWMO_MS;
     Audio.sfx('pickup');
+  }
+
+  /**
+   * Recadre un groupe ennemi sur l'armée du joueur au moment où il apparaît.
+   *
+   * Sans ça, les effectifs suivent l'index de rencontre et jamais l'état réel
+   * de la run : une mauvaise passe enferme le joueur dans une spirale — armée
+   * de 4 face à 300 ennemis, 5 % d'apprivoisement, plus aucun retour possible.
+   * Le plafond garde chaque rencontre jouable ; le plancher empêche une armée
+   * énorme de ne plus croiser que des groupes dérisoires.
+   */
+  scaleEncounter(ev) {
+    ev.scaled = true;
+    const base = ev.baseCount || ev.count;
+    // Plafond volontairement serré : un groupe qui ferait plus que doubler
+    // l'armée en cas de ralliement rend la croissance exponentielle (six
+    // apprivoisements enchaînés menaient à des troupes de 1500).
+    const ceiling = Math.round(this.army.count * 0.9 + 8);
+    const floorCount = Math.round(this.army.count * 0.18);
+    const count = Math.max(3, Math.min(Math.max(base, floorCount), ceiling));
+    if (count === ev.count) return;
+    ev.count = count;
+    ev.units = makeEnemyUnits(this.fxRng, count);
   }
 
   nextEncounter() {
@@ -618,7 +652,11 @@ export class RunScene extends Phaser.Scene {
   startBoss() {
     this.phase = 'boss';
     const def = Object.assign({}, this.biome.boss);
-    def.hp = Math.round(def.hp * this.difficulty);
+    // La vie du général suit la taille de l'armée : sinon une troupe de 400
+    // l'effacerait en trois secondes, et une troupe de 40 n'en viendrait jamais
+    // à bout. Le socle fixe garde du nombre un avantage réel (§7 : « à la fois
+    // un nombre suffisant ET le bon style »), sans rendre le duel trivial.
+    def.hp = Math.round((def.hp + this.army.count * HP_PER_UNIT) * this.difficulty);
     this.boss = new Boss(def);
     this.preview.hide();
     Audio.sfx('boss');
@@ -721,7 +759,10 @@ export class RunScene extends Phaser.Scene {
     }
     this.edgeAlert = Math.min(1, this.edgeAlert + dt * 3);
     const resist = clamp(1 - this.meta.resist - this.army.bonus('resist'), 0.25, 1);
-    this.edgeAccum += outside * dt * 0.85 * resist;
+    // Perte plafonnée à ~6 % de l'armée par seconde : déborder doit coûter cher
+    // et se voir, sans effacer une troupe de 400 en deux secondes de virage.
+    const rate = Math.min(outside * 0.45, this.army.count * 0.06);
+    this.edgeAccum += rate * dt * resist;
     if (this.edgeAccum >= 1) {
       const n = Math.floor(this.edgeAccum);
       this.edgeAccum -= n;
