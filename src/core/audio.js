@@ -304,3 +304,18 @@ class AudioEngine {
 }
 
 export const Audio = new AudioEngine();
+
+// Sur iOS, un AudioContext ne se déverrouille que depuis un gestionnaire DOM
+// déclenché par un geste réel. On s'y accroche directement, sans dépendre du
+// chemin d'événements de Phaser : premier toucher, clic ou touche → audio.
+if (typeof document !== 'undefined') {
+  const unlock = () => {
+    Audio.resume();
+    if (Audio.ready && Audio.ctx && Audio.ctx.state === 'running') {
+      ['touchend', 'pointerdown', 'keydown'].forEach((ev) =>
+        document.removeEventListener(ev, unlock, true));
+    }
+  };
+  ['touchend', 'pointerdown', 'keydown'].forEach((ev) =>
+    document.addEventListener(ev, unlock, { capture: true, passive: true }));
+}

@@ -32,7 +32,7 @@ import { resolveFight, resolveTame, previewFight, previewTame } from '../entitie
 
 import { HUD } from '../ui/HUD.js';
 import { ChoiceGatePreview } from '../ui/ChoiceGatePreview.js';
-import { title, body, makeButton } from '../ui/theme.js';
+import { IS_TOUCH, title, body, makeButton } from '../ui/theme.js';
 
 const TAME_SLOW = 0.52;
 const TAME_SLOW_MS = 1300;
@@ -247,11 +247,11 @@ export class RunScene extends Phaser.Scene {
     this.hints = [];
     if (!this.biome.tutorial || this.save.seenTutorial || this.mode !== 'story') return;
     this.hints = [
-      { at: 420, text: '← → ou glisse', sub: 'ta troupe suit ton doigt' },
+      { at: 420, text: IS_TOUCH ? 'Glisse le doigt' : '← → ou glisse', sub: 'ta troupe suit ton doigt' },
       { at: 1500, text: 'Traverse les portes vertes', sub: 'elles grossissent ton armée' },
       { at: 2700, text: '⚔ écrase · 🤝 rallie', sub: 'les chiffres affichés sont ton vrai choix' },
       { at: 4400, text: 'Ramasse les jetons de style', sub: '🎋 bat 🔥 · 🔥 bat 🌪️ · 💧 bat 🎋 · 🌪️ bat 💧' },
-      { at: 6400, text: 'Le Chi monte quand tu rallies', sub: 'plein → tape ☯ pour l\'Éveil' },
+      { at: 6400, text: 'Le Chi monte quand tu rallies', sub: IS_TOUCH ? 'plein → touche ☯ pour l\'Éveil' : 'plein → tape ☯ ou E pour l\'Éveil' },
     ];
     this.save.seenTutorial = true;
     Save.save();
@@ -983,7 +983,9 @@ export class RunScene extends Phaser.Scene {
       '🎋 bat 🔥   ·   🔥 bat 🌪️   ·   🌪️ bat 💧   ·   💧 bat 🎋',
       body(16, '#cbd5e1')).setOrigin(0.5);
     const controls = this.add.text(W / 2, H * 0.345,
-      '← →  diriger   ·   ESPACE  capacité   ·   E  Éveil',
+      IS_TOUCH
+        ? 'glisse pour diriger   ·   tap : capacité   ·   ☯ : Éveil'
+        : '← →  diriger   ·   ESPACE  capacité   ·   E  Éveil',
       body(14, '#94a3b8')).setOrigin(0.5);
 
     const resume = makeButton(this, W / 2, H * 0.45, 280, 66, 'REPRENDRE', {

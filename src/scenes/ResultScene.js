@@ -93,13 +93,14 @@ export class ResultScene extends Phaser.Scene {
     // --- moments forts ---
     const highlights = (s.highlights || []).slice(0, 3);
     if (highlights.length) {
-      panel(this, W / 2, H * 0.545, W - 60, 26 + highlights.length * 28, {
+      const boxH = 38 + highlights.length * 28;
+      panel(this, W / 2, H * 0.545, W - 60, boxH, {
         fill: 0x020617, alpha: 0.55, stroke: 0xfcd34d, strokeAlpha: 0.3,
       });
-      this.add.text(W / 2, H * 0.545 - (13 + highlights.length * 14) + 4,
+      this.add.text(W / 2, H * 0.545 - boxH / 2 + 16,
         'MOMENTS FORTS', title(12, '#fcd34d')).setOrigin(0.5);
       highlights.forEach((h, i) => {
-        const y = H * 0.545 - (highlights.length - 1) * 14 + i * 28 + 8;
+        const y = H * 0.545 - boxH / 2 + 40 + i * 28;
         this.add.text(W / 2, y, `${h.icon}  ${h.text}`, body(14, '#e2e8f0')).setOrigin(0.5);
       });
     }

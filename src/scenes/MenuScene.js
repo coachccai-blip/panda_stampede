@@ -10,7 +10,7 @@ import { STYLES } from '../data/styles.js';
 import { Audio } from '../core/audio.js';
 import { unitTexture } from '../core/textures.js';
 import * as Save from '../core/save.js';
-import { FONT, title, body, makeButton, makeClickable, panel } from '../ui/theme.js';
+import { FONT, IS_TOUCH, title, body, makeButton, makeClickable, panel } from '../ui/theme.js';
 
 const MODES = [
   { key: 'story', label: 'AVENTURE', icon: '🗺️' },
@@ -82,7 +82,9 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5).setAlign('center').setLineSpacing(6);
 
     this.add.text(W / 2, H * 0.85,
-      '← →  ou glisse   ·   ESPACE  capacité   ·   E  Éveil',
+      IS_TOUCH
+        ? 'glisse le doigt pour diriger   ·   tap : capacité   ·   ☯ : Éveil'
+        : '← →  ou glisse   ·   ESPACE  capacité   ·   E  Éveil',
       body(14, '#94a3b8')).setOrigin(0.5);
 
     // --- roue des styles ---
@@ -141,9 +143,10 @@ export class MenuScene extends Phaser.Scene {
     const cast = ['panda', 'panda', 'wolf', 'panda', 'boar', 'panda', 'eagle'];
     cast.forEach((sp, i) => {
       const known = sp === 'panda' || Save.get().codex[sp];
-      const y = H * 0.96 + (i % 3) * 8;
+      // Collés au bord inférieur, sous la roue des styles quelle que soit la hauteur d'écran.
+      const y = H - 2 + (i % 3) * 5;
       const img = this.add.image(-80, y, unitTexture(known ? sp : 'panda', skin))
-        .setOrigin(0.5, 1).setScale(0.52).setAlpha(0.9).setDepth(1);
+        .setOrigin(0.5, 1).setScale(0.46).setAlpha(0.85).setDepth(1);
       const run = () => {
         img.x = -80 - i * 40;
         this.tweens.add({

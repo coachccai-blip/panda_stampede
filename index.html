@@ -3,21 +3,44 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#0d1b16" />
+<meta name="theme-color" content="#0b1410" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Panda Stampede" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
 <title>Panda Stampede</title>
 <meta name="description" content="Panda Stampede — crowd runner où tu choisis entre combattre et apprivoiser pour bâtir une armée hybride." />
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
   html, body {
-    margin: 0; padding: 0; height: 100%; width: 100%;
+    margin: 0; padding: 0; width: 100%; height: 100%;
     background: #0b1410; overflow: hidden;
     font-family: "Trebuchet MS", "Segoe UI", system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none; user-select: none;
   }
-  body { touch-action: none; overscroll-behavior: none; }
-  #game { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-  #game canvas { display: block; touch-action: none; }
+  body {
+    /* 100dvh suit la barre d'adresse mobile qui apparaît et disparaît ;
+       la valeur 100% reste le repli pour les navigateurs plus anciens. */
+    height: 100%; height: 100dvh;
+    touch-action: none; overscroll-behavior: none;
+    position: fixed; inset: 0;
+  }
+  /* #game réserve les zones d'encoche et de barre système (iPhone, Android à
+     bords incurvés) ; #stage, à l'intérieur, est le parent réel du canvas. */
+  #game {
+    width: 100%; height: 100%;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  #stage canvas { display: block; touch-action: none; }
+
   #boot {
     position: fixed; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 14px;
@@ -32,10 +55,29 @@
   #boot .err { color: #fca5a5; font-size: 13px; max-width: 40ch; }
   @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
   @media (prefers-reduced-motion: reduce) { #boot .glyph { animation: none } }
+
+  /* Téléphone tenu en paysage : le jeu est conçu en portrait, on le dit
+     plutôt que d'afficher une piste de 200 px de large. Les ordinateurs, dont
+     la fenêtre paysage est bien plus haute, ne sont pas concernés. */
+  #rotate {
+    display: none; position: fixed; inset: 0; z-index: 20;
+    background: #0b1410; color: #e8f5e9; text-align: center;
+    flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  }
+  #rotate .glyph { font-size: 56px; animation: spin 2.4s ease-in-out infinite; }
+  #rotate p { margin: 0; font-size: 16px; opacity: .85; }
+  @keyframes spin { 0%,20% { transform: rotate(0) } 50%,70% { transform: rotate(90deg) } 100% { transform: rotate(0) } }
+  @media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+    #rotate { display: flex; }
+  }
 </style>
 </head>
 <body>
-  <div id="game"></div>
+  <div id="game"><div id="stage"></div></div>
+  <div id="rotate">
+    <div class="glyph">📱</div>
+    <p>Tourne ton téléphone en portrait</p>
+  </div>
   <div id="boot">
     <div class="glyph">🐼</div>
     <h1>Panda Stampede</h1>

@@ -4,7 +4,7 @@
 // lit en jouant.
 
 import { STYLES, STYLE_KEYS } from '../data/styles.js';
-import { FONT, title, body, intToCss } from './theme.js';
+import { FONT, IS_TOUCH, title, body, intToCss } from './theme.js';
 
 export class StyleIndicator {
   constructor(scene, x, y) {
@@ -65,7 +65,7 @@ export class StyleIndicator {
     this.name.setText(st.short).setColor(intToCss(st.color));
     const beaten = STYLES[st.strongVs];
     this.beats.setText(`bat ${beaten.icon}`);
-    this.hint.setText(abilityActive ? abilityName : (cooldown >= 1 ? 'ESPACE' : ''));
+    this.hint.setText(abilityActive ? abilityName : (cooldown >= 1 ? (IS_TOUCH ? 'TAP' : 'ESPACE') : ''));
     this.hint.setColor(abilityActive ? intToCss(st.color) : '#64748b');
 
     for (let i = 0; i < this.dots.length; i++) {

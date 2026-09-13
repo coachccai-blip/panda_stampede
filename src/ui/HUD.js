@@ -9,7 +9,7 @@ import { STYLES } from '../data/styles.js';
 import { SPECIES } from '../data/enemies.js';
 import { SHAPE_ICONS, SHAPE_LABELS } from '../systems/FormationChecker.js';
 import { StyleIndicator } from './StyleIndicator.js';
-import { FONT, title, body, stroked, intToCss, makeClickable } from './theme.js';
+import { FONT, IS_TOUCH, title, body, stroked, intToCss, makeClickable } from './theme.js';
 
 export class HUD {
   constructor(scene, opts = {}) {
@@ -54,7 +54,7 @@ export class HUD {
       .setOrigin(0.5).setDepth(902).setScrollFactor(0);
     this.chiHint = scene.add.text(this.chiX, this.chiY + 52, '', body(11, '#94a3b8'))
       .setOrigin(0.5).setDepth(902).setScrollFactor(0);
-    this.chiHit = scene.add.circle(this.chiX, this.chiY, 56, 0xffffff, 0.001)
+    this.chiHit = scene.add.circle(this.chiX, this.chiY, IS_TOUCH ? 74 : 56, 0xffffff, 0.001)
       .setDepth(903).setScrollFactor(0);
     makeClickable(scene, this.chiHit, () => this.onChi());
 
@@ -204,7 +204,7 @@ export class HUD {
     this.chiIcon.setScale(active ? 1.1 + 0.06 * pulse : ready ? 1 + 0.08 * pulse : 0.9);
     this.chiLabel.setText(active ? 'ÉVEIL' : 'CHI');
     this.chiLabel.setColor(active || ready ? '#fde68a' : '#64748b');
-    this.chiHint.setText(active ? '' : ready ? 'TAP / E' : `${Math.round(state.chi * 100)} %`);
+    this.chiHint.setText(active ? '' : ready ? (IS_TOUCH ? 'TAP' : 'TAP / E') : `${Math.round(state.chi * 100)} %`);
     this.chiHint.setColor(ready ? '#fde68a' : '#64748b');
   }
 

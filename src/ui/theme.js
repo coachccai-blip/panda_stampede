@@ -2,6 +2,10 @@
 
 export const FONT = '"Trebuchet MS", "Segoe UI", Verdana, sans-serif';
 
+/** Vrai sur un écran tactile : les textes d'aide parlent alors de « tap ». */
+export const IS_TOUCH = typeof window !== 'undefined'
+  && (('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0);
+
 export const COLORS = {
   ink: '#f8fafc',
   inkDim: '#cbd5e1',
