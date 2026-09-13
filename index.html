@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0d1b16" />
+<title>Panda Stampede</title>
+<meta name="description" content="Panda Stampede — crowd runner où tu choisis entre combattre et apprivoiser pour bâtir une armée hybride." />
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    background: #0b1410; overflow: hidden;
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body { touch-action: none; overscroll-behavior: none; }
+  #game { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  #game canvas { display: block; touch-action: none; }
+  #boot {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px;
+    background: radial-gradient(circle at 50% 35%, #1c3b2c 0%, #0b1410 70%);
+    color: #e8f5e9; text-align: center; padding: 24px; z-index: 10;
+    transition: opacity .45s ease;
+  }
+  #boot.hidden { opacity: 0; pointer-events: none; }
+  #boot .glyph { font-size: 68px; line-height: 1; animation: bob 1.6s ease-in-out infinite; }
+  #boot h1 { margin: 0; font-size: 26px; letter-spacing: 3px; text-transform: uppercase; color: #a7f3d0; }
+  #boot p { margin: 0; font-size: 14px; opacity: .75; max-width: 32ch; line-height: 1.5; }
+  #boot .err { color: #fca5a5; font-size: 13px; max-width: 40ch; }
+  @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+  @media (prefers-reduced-motion: reduce) { #boot .glyph { animation: none } }
+</style>
+</head>
+<body>
+  <div id="game"></div>
+  <div id="boot">
+    <div class="glyph">🐼</div>
+    <h1>Panda Stampede</h1>
+    <p id="boot-msg">Chargement du dojo…</p>
+  </div>
+  <script>
+  (function () {
+    var msg = document.getElementById('boot-msg');
+    // Phaser est embarqué dans le dépôt : la page est autonome, sans CDN.
+    // Les deux CDN ne servent que de filet de secours.
+    var SOURCES = [
+      './vendor/phaser.min.js',
+      'https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js'
+    ];
+    function loadScript(src) {
+      return new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = src; s.async = false;
+        s.onload = resolve;
+        s.onerror = function () { reject(new Error('fail ' + src)); };
+        document.head.appendChild(s);
+      });
+    }
+    function fail(text) {
+      msg.className = 'err';
+      msg.textContent = text;
+    }
+    (async function () {
+      for (var i = 0; i < SOURCES.length; i++) {
+        try { await loadScript(SOURCES[i]); } catch (e) { /* try next CDN */ }
+        if (window.Phaser) break;
+      }
+      if (!window.Phaser) {
+        fail("Impossible de charger Phaser 3 depuis le CDN. Vérifie ta connexion puis recharge la page.");
+        return;
+      }
+      try {
+        await import('./src/main.js');
+      } catch (e) {
+        console.error(e);
+        fail("Erreur au démarrage du jeu : " + (e && e.message ? e.message : e) +
+             "\nSi tu ouvres le fichier en local, lance un serveur (python3 -m http.server) au lieu de double-cliquer sur index.html.");
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>
