@@ -9,7 +9,7 @@ import { STYLES } from '../data/styles.js';
 import { SPECIES } from '../data/enemies.js';
 import { SHAPE_ICONS, SHAPE_LABELS } from '../systems/FormationChecker.js';
 import { StyleIndicator } from './StyleIndicator.js';
-import { FONT, title, body, stroked, intToCss } from './theme.js';
+import { FONT, title, body, stroked, intToCss, makeClickable } from './theme.js';
 
 export class HUD {
   constructor(scene, opts = {}) {
@@ -55,12 +55,8 @@ export class HUD {
     this.chiHint = scene.add.text(this.chiX, this.chiY + 52, '', body(11, '#94a3b8'))
       .setOrigin(0.5).setDepth(902).setScrollFactor(0);
     this.chiHit = scene.add.circle(this.chiX, this.chiY, 56, 0xffffff, 0.001)
-      .setDepth(903).setScrollFactor(0)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', (p, x, y, e) => {
-        if (e && e.stopPropagation) e.stopPropagation();
-        this.onChi();
-      });
+      .setDepth(903).setScrollFactor(0);
+    makeClickable(scene, this.chiHit, () => this.onChi());
 
     // --- formation ---
     this.formationText = scene.add.text(W / 2, H - 46, '', title(16, '#fcd34d'))
@@ -88,8 +84,9 @@ export class HUD {
     this.bannerBox.add([this.bannerBg, this.banner, this.subBanner]);
 
     this.pauseBtn = scene.add.text(W / 2, 30, '⏸', { fontFamily: FONT, fontSize: '26px' })
-      .setOrigin(0.5).setDepth(892).setScrollFactor(0)
-      .setInteractive({ useHandCursor: true });
+      .setOrigin(0.5).setDepth(892).setScrollFactor(0);
+    this.onPause = () => {};
+    makeClickable(scene, this.pauseBtn, () => this.onPause(), { pad: 22 });
   }
 
   update(state) {

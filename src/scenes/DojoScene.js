@@ -4,7 +4,7 @@ import { UPGRADES, COMPANIONS, SKINS, CODEX_BONUSES } from '../data/upgrades.js'
 import { SPECIES, TAMEABLE } from '../data/enemies.js';
 import { Audio } from '../core/audio.js';
 import * as Save from '../core/save.js';
-import { FONT, title, body, makeButton } from '../ui/theme.js';
+import { FONT, title, body, makeButton, makeClickable } from '../ui/theme.js';
 
 const TABS = [
   { key: 'upgrades', label: 'ENTRAÎNEMENT' },
@@ -38,9 +38,8 @@ export class DojoScene extends Phaser.Scene {
     // --- onglets ---
     this.tabButtons = TABS.map((t, i) => {
       const x = W * (0.145 + i * 0.237);
-      const btn = this.add.text(x, H * 0.145, t.label, title(14, '#cbd5e1'))
-        .setOrigin(0.5).setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => { Audio.sfx('ui'); this.setTab(t.key); });
+      const btn = this.add.text(x, H * 0.145, t.label, title(14, '#cbd5e1')).setOrigin(0.5);
+      makeClickable(this, btn, () => { Audio.sfx('ui'); this.setTab(t.key); }, { pad: 14 });
       return { key: t.key, obj: btn };
     });
     this.tabUnderline = this.add.graphics();
@@ -325,13 +324,12 @@ export class DojoScene extends Phaser.Scene {
         body(11, owned ? '#e2e8f0' : '#64748b')).setOrigin(0.5).setWordWrapWidth(cellW - 8));
 
       if (owned) {
-        const hit = this.add.rectangle(x, y, cellW, 116, 0xffffff, 0.001)
-          .setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => {
-            Save.setSkin(key);
-            Audio.sfx('buy');
-            this.render();
-          });
+        const hit = this.add.rectangle(x, y, cellW, 116, 0xffffff, 0.001);
+        makeClickable(this, hit, () => {
+          Save.setSkin(key);
+          Audio.sfx('buy');
+          this.render();
+        });
         this.content.add(hit);
       }
     });
@@ -368,9 +366,8 @@ export class DojoScene extends Phaser.Scene {
         body(12, owned ? (active ? '#7dd3fc' : '#cbd5e1') : affordable && known ? '#a3e635' : '#64748b')
       ).setOrigin(0.5));
 
-      const hit = this.add.rectangle(x, rowY + 4, per - 8, 96, 0xffffff, 0.001)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
+      const hit = this.add.rectangle(x, rowY + 4, per - 8, 96, 0xffffff, 0.001);
+      makeClickable(this, hit, () => {
           if (!known) { Audio.sfx('deny'); return; }
           if (!owned) {
             if (Save.spendBamboo(c.cost)) {
@@ -387,7 +384,7 @@ export class DojoScene extends Phaser.Scene {
             Audio.sfx('ui');
           }
           this.render();
-        });
+      });
       this.content.add(hit);
     });
   }

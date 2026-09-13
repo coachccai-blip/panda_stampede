@@ -10,7 +10,7 @@ import { STYLES } from '../data/styles.js';
 import { Audio } from '../core/audio.js';
 import { unitTexture } from '../core/textures.js';
 import * as Save from '../core/save.js';
-import { FONT, title, body, makeButton, panel } from '../ui/theme.js';
+import { FONT, title, body, makeButton, makeClickable, panel } from '../ui/theme.js';
 
 const MODES = [
   { key: 'story', label: 'AVENTURE', icon: '🗺️' },
@@ -45,8 +45,8 @@ export class MenuScene extends Phaser.Scene {
     this.modeTabs = MODES.map((m, i) => {
       const x = W * (0.19 + i * 0.31);
       const t = this.add.text(x, H * 0.225, `${m.icon} ${m.label}`, title(14, '#94a3b8'))
-        .setOrigin(0.5).setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => this.setMode(m.key));
+        .setOrigin(0.5);
+      makeClickable(this, t, () => this.setMode(m.key), { pad: 14 });
       return { key: m.key, obj: t };
     });
     this.modeUnderline = this.add.graphics();
@@ -60,12 +60,10 @@ export class MenuScene extends Phaser.Scene {
     this.cardNote = this.add.text(W / 2, H * 0.487, '', title(15, '#fcd34d')).setOrigin(0.5);
 
     const arrowStyle = { fontFamily: FONT, fontSize: '42px', color: '#a3e635' };
-    this.prevBtn = this.add.text(W * 0.1, H * 0.385, '‹', arrowStyle)
-      .setOrigin(0.5).setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => this.move(-1));
-    this.nextBtn = this.add.text(W * 0.9, H * 0.385, '›', arrowStyle)
-      .setOrigin(0.5).setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => this.move(1));
+    this.prevBtn = this.add.text(W * 0.1, H * 0.385, '‹', arrowStyle).setOrigin(0.5);
+    this.nextBtn = this.add.text(W * 0.9, H * 0.385, '›', arrowStyle).setOrigin(0.5);
+    makeClickable(this, this.prevBtn, () => this.move(-1), { pad: 26 });
+    makeClickable(this, this.nextBtn, () => this.move(1), { pad: 26 });
 
     // --- actions ---
     this.playBtn = makeButton(this, W / 2, H * 0.575, 300, 78, 'COURIR', {
@@ -102,14 +100,13 @@ export class MenuScene extends Phaser.Scene {
     this.add.text(W / 2, wheelY + 30, 'chaque style domine le suivant', body(12, '#64748b')).setOrigin(0.5);
 
     this.muteBtn = this.add.text(W - 34, 34, save.muted ? '🔇' : '🔊',
-      { fontFamily: FONT, fontSize: '26px' })
-      .setOrigin(0.5).setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => {
-        const m = !this.save.muted;
-        Save.setMuted(m);
-        Audio.setMuted(m);
-        this.muteBtn.setText(m ? '🔇' : '🔊');
-      });
+      { fontFamily: FONT, fontSize: '26px' }).setOrigin(0.5);
+    makeClickable(this, this.muteBtn, () => {
+      const m = !this.save.muted;
+      Save.setMuted(m);
+      Audio.setMuted(m);
+      this.muteBtn.setText(m ? '🔇' : '🔊');
+    }, { pad: 18 });
 
     this.input.once('pointerdown', () => {
       Audio.resume(); Audio.startMusic('run'); Audio.setIntensity(1);

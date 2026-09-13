@@ -37,6 +37,83 @@ export function stroked(size, color = COLORS.ink, strokeW = 5) {
   };
 }
 
+/**
+ * Rend un objet cliquable de façon déterministe.
+ *
+ * Phaser propose `setInteractive()`, mais son test de collision s'est révélé
+ * peu fiable ici : selon la taille de la fenêtre, le tout premier clic d'une
+ * session n'atteignait jamais l'objet — le pointeur tombait pourtant au centre
+ * exact du bouton. Un joueur voyait donc un menu qui ne répondait pas.
+ *
+ * On teste donc nous-mêmes les coordonnées du pointeur contre un rectangle
+ * monde, au niveau de la scène. C'est prévisible, débogable, et ça marche au
+ * premier clic comme au centième.
+ */
+let hoverCount = 0;
+
+function setHover(scene, on, wasOn) {
+  if (on === wasOn) return;
+  hoverCount = Math.max(0, hoverCount + (on ? 1 : -1));
+  scene.input.setDefaultCursor(hoverCount > 0 ? 'pointer' : 'default');
+}
+
+export function makeClickable(scene, obj, onClick, opts = {}) {
+  const pad = opts.pad || 0;
+  let pressed = false;
+  let hovering = false;
+
+  const rect = () => {
+    if (opts.rect) return opts.rect();
+    const b = obj.getBounds();
+    return new Phaser.Geom.Rectangle(b.x - pad, b.y - pad, b.width + pad * 2, b.height + pad * 2);
+  };
+
+  const inside = (p) => {
+    if (!obj.visible || obj.enabled === false) return false;
+    return Phaser.Geom.Rectangle.Contains(rect(), p.x, p.y);
+  };
+
+  const onDown = (p) => {
+    if (!inside(p)) return;
+    pressed = true;
+    // Marque le pointeur comme consommé : la scène de jeu ne doit pas
+    // interpréter un appui sur un bouton du HUD comme un ordre de direction.
+    p.uiHandled = true;
+    if (opts.onPress) opts.onPress();
+  };
+
+  const onUp = (p) => {
+    if (!pressed) return;
+    pressed = false;
+    if (opts.onRelease) opts.onRelease();
+    if (inside(p)) onClick(p);
+  };
+
+  // Le curseur est piloté par un compteur global : plusieurs éléments écoutent
+  // le même événement, et sans ça le dernier de la liste remettrait toujours la
+  // flèche par-dessus la main de celui qu'on survole vraiment.
+  const onMove = (p) => {
+    const on = inside(p);
+    setHover(scene, on, hovering);
+    if (on !== hovering && opts.onHover) opts.onHover(on);
+    hovering = on;
+  };
+
+  scene.input.on('pointerdown', onDown);
+  scene.input.on('pointerup', onUp);
+  scene.input.on('pointerupoutside', () => { pressed = false; if (opts.onRelease) opts.onRelease(); });
+  scene.input.on('pointermove', onMove);
+
+  obj.once('destroy', () => {
+    if (hovering) setHover(scene, false, true);
+    scene.input.off('pointerdown', onDown);
+    scene.input.off('pointerup', onUp);
+    scene.input.off('pointermove', onMove);
+  });
+
+  return obj;
+}
+
 /** Bouton arrondi réutilisable (retourne un container interactif). */
 export function makeButton(scene, x, y, w, h, label, opts = {}) {
   const c = scene.add.container(x, y);
@@ -70,14 +147,25 @@ export function makeButton(scene, x, y, w, h, label, opts = {}) {
   };
   c.setEnabled(c.enabled);
 
-  c.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
-  c.on('pointerover', () => { if (c.enabled) { paint(fill, -3); scene.input.setDefaultCursor('pointer'); } });
-  c.on('pointerout', () => { paint(c.enabled ? fill : fillDim); scene.input.setDefaultCursor('default'); });
-  c.on('pointerdown', () => { if (c.enabled) paint(fill, 4); });
-  c.on('pointerup', () => {
-    paint(c.enabled ? fill : fillDim);
-    if (c.enabled && opts.onClick) opts.onClick();
+  let hovering = false;
+  makeClickable(scene, c, () => { if (opts.onClick) opts.onClick(); }, {
+    // Rectangle explicite : les bounds du container incluraient l'ombre portée.
+    rect: () => {
+      const m = c.getWorldTransformMatrix();
+      const sx = m.scaleX || 1;
+      const sy = m.scaleY || 1;
+      return new Phaser.Geom.Rectangle(m.tx - (w / 2) * sx, m.ty - (h / 2) * sy, w * sx, h * sy);
+    },
+    onPress: () => { if (c.enabled) paint(fill, 4); },
+    onRelease: () => paint(c.enabled ? fill : fillDim, hovering && c.enabled ? -3 : 0),
+    onHover: (on) => {
+      if (on === hovering) return;
+      hovering = on;
+      if (!c.enabled) return;
+      paint(fill, on ? -3 : 0);
+    },
   });
+
   return c;
 }
 

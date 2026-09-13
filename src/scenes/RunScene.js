@@ -124,7 +124,7 @@ export class RunScene extends Phaser.Scene {
     this.renderer = new WorldRenderer(this, this.biome, quality);
     this.hud = new HUD(this, { onChi: () => this.useChi() });
     this.preview = new ChoiceGatePreview(this);
-    this.hud.pauseBtn.on('pointerdown', () => this.togglePause());
+    this.hud.onPause = () => this.togglePause();
 
     this.buildLeg(this.biomeIndex, 1);
     this.hud.biomeCard(this.biome, this.legSubtitle());
@@ -200,8 +200,9 @@ export class RunScene extends Phaser.Scene {
     this.input.on('pointerdown', (p) => {
       Audio.resume();
       if (this.paused || this.phase === 'over') return;
-      // La zone des boutons du bas ne pilote pas la course.
-      if (p.y > this.scale.height - 190 && (p.x < 150 || p.x > this.scale.width - 150)) return;
+      // Un appui déjà consommé par un bouton du HUD (Chi, pause) ne doit pas
+      // être réinterprété comme un ordre de direction.
+      if (p.uiHandled) return;
       this.dragging = true;
       this.pointerDownAt = this.time.now;
       this.pointerMoved = 0;
