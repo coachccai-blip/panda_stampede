@@ -38,7 +38,9 @@
     padding: env(safe-area-inset-top) env(safe-area-inset-right)
              env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
-  #stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  /* Pas de centrage flex ici : Phaser centre déjà le canvas par ses marges,
+     et cumuler les deux le décalait d'un quart d'écran sur ordinateur. */
+  #stage { width: 100%; height: 100%; display: block; position: relative; }
   #stage canvas { display: block; touch-action: none; }
 
   #boot {
@@ -70,6 +72,28 @@
   @media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
     #rotate { display: flex; }
   }
+
+  /* Mode d'emploi d'installation (iOS n'a pas d'invite native) */
+  #install-help {
+    display: none; position: fixed; inset: 0; z-index: 30;
+    background: rgba(2, 6, 23, .92); color: #e8f5e9;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 28px; text-align: center;
+  }
+  #install-help.show { display: flex; }
+  #install-help h2 { margin: 0; font-size: 22px; color: #a7f3d0; }
+  #install-help ol { margin: 0; padding-left: 22px; text-align: left; font-size: 16px; line-height: 1.7; max-width: 34ch; }
+  #install-help button {
+    margin-top: 8px; font: inherit; font-size: 17px; font-weight: bold;
+    padding: 12px 28px; border: 0; border-radius: 14px; background: #22c55e; color: #062314;
+  }
+
+  /* Diagnostic : ?debug dans l'adresse */
+  #diag {
+    display: none; position: fixed; left: 6px; bottom: 6px; z-index: 40;
+    font: 11px/1.4 monospace; color: #a7f3d0; background: rgba(0,0,0,.6);
+    padding: 6px 8px; border-radius: 6px; pointer-events: none; white-space: pre;
+  }
 </style>
 </head>
 <body>
@@ -78,12 +102,68 @@
     <div class="glyph">📱</div>
     <p>Tourne ton téléphone en portrait</p>
   </div>
+  <div id="install-help">
+    <h2>📲 Installer sur l'écran d'accueil</h2>
+    <ol id="install-steps"></ol>
+    <button type="button" id="install-close">Compris</button>
+  </div>
+  <div id="diag"></div>
   <div id="boot">
     <div class="glyph">🐼</div>
     <h1>Panda Stampede</h1>
     <p id="boot-msg">Chargement du dojo…</p>
   </div>
   <script>
+  // --- Installation (PWA) ---------------------------------------------------
+  // Android/Chrome émet `beforeinstallprompt` : on le garde sous le coude pour
+  // que le bouton « Installer » du menu déclenche la vraie invite système.
+  // iOS n'a pas d'équivalent : on affiche la marche à suivre.
+  window.__installPrompt = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    window.__installPrompt = e;
+  });
+  window.__isStandalone = function () {
+    return window.matchMedia('(display-mode: standalone)').matches
+      || window.matchMedia('(display-mode: fullscreen)').matches
+      || window.navigator.standalone === true;
+  };
+  window.__requestInstall = function () {
+    if (window.__installPrompt) {
+      var ev = window.__installPrompt;
+      window.__installPrompt = null;
+      ev.prompt();
+      return 'prompt';
+    }
+    var ua = navigator.userAgent;
+    var ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var steps = document.getElementById('install-steps');
+    steps.innerHTML = '';
+    var list = ios
+      ? ['Touche le bouton Partager (le carré avec une flèche) en bas de Safari',
+         'Fais défiler et choisis « Sur l\'écran d\'accueil »',
+         'Touche « Ajouter » : le jeu s\'ouvre ensuite en plein écran, comme une app']
+      : ['Ouvre le menu du navigateur (⋮ ou ⋯)',
+         'Choisis « Installer l\'application » ou « Ajouter à l\'écran d\'accueil »',
+         'Confirme : le jeu s\'ouvre ensuite en plein écran, comme une app'];
+    list.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; steps.appendChild(li); });
+    document.getElementById('install-help').classList.add('show');
+    return ios ? 'ios-help' : 'help';
+  };
+  document.getElementById('install-close').addEventListener('click', function () {
+    document.getElementById('install-help').classList.remove('show');
+  });
+
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function () { /* hors-ligne indisponible, le jeu marche quand même */ });
+    });
+  }
+
+  // --- Diagnostic (?debug) --------------------------------------------------
+  window.__diag = /[?&]debug/.test(location.search) ? document.getElementById('diag') : null;
+  if (window.__diag) window.__diag.style.display = 'block';
+
   (function () {
     var msg = document.getElementById('boot-msg');
     // Phaser est embarqué dans le dépôt : la page est autonome, sans CDN.

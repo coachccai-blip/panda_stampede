@@ -19,6 +19,8 @@ export class HUD {
     this.W = W;
     this.H = H;
     this.onChi = opts.onChi || (() => {});
+    this.onAbility = opts.onAbility || (() => {});
+    this.onSteer = opts.onSteer || (() => {});
     this.displayArmy = 0;
 
     this.gfx = scene.add.graphics().setDepth(870).setScrollFactor(0);
@@ -43,6 +45,40 @@ export class HUD {
 
     // --- style & Chi (bas d'écran, zone des pouces) ---
     this.styleIndicator = new StyleIndicator(scene, 80, H - 118);
+    // L'anneau de style est lui-même un bouton : toucher = capacité active.
+    this.abilityHit = scene.add.circle(80, H - 118, IS_TOUCH ? 74 : 56, 0xffffff, 0.001)
+      .setDepth(903).setScrollFactor(0);
+    makeClickable(scene, this.abilityHit, () => this.onAbility());
+
+    // --- flèches de déplacement (tactile seulement) ---
+    // Le glissement reste le pilotage fin ; les flèches sont le pilotage sûr :
+    // un tap = une voie, impossible de le rater, visible sans explication.
+    this.steerButtons = [];
+    if (IS_TOUCH) {
+      [[-1, W * 0.36, '◀'], [1, W * 0.64, '▶']].forEach(([dir, x, glyph]) => {
+        const g = scene.add.graphics().setDepth(900).setScrollFactor(0);
+        const bw = 128;
+        const bh = 96;
+        const y = H - 118;
+        const paint = (pressed) => {
+          g.clear();
+          g.fillStyle(0x020617, pressed ? 0.75 : 0.45);
+          g.fillRoundedRect(x - bw / 2, y - bh / 2, bw, bh, 22);
+          g.lineStyle(3, 0xa3e635, pressed ? 1 : 0.55);
+          g.strokeRoundedRect(x - bw / 2, y - bh / 2, bw, bh, 22);
+        };
+        paint(false);
+        const t = scene.add.text(x, y, glyph, { fontFamily: FONT, fontSize: '40px', color: '#d9f99d' })
+          .setOrigin(0.5).setDepth(902).setScrollFactor(0);
+        const hit = scene.add.rectangle(x, y, bw + 24, bh + 24, 0xffffff, 0.001)
+          .setDepth(903).setScrollFactor(0);
+        makeClickable(scene, hit, () => {}, {
+          onPress: () => { paint(true); this.onSteer(dir); },
+          onRelease: () => paint(false),
+        });
+        this.steerButtons.push({ g, t, hit });
+      });
+    }
 
     this.chiX = W - 80;
     this.chiY = H - 118;

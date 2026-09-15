@@ -16,11 +16,25 @@ diversité.
 
 | Action | Clavier | Tactile |
 |---|---|---|
-| Diriger la troupe | `←` `→` ou `Q` `D` | glisser le doigt |
-| Capacité de style | `Espace` | tap rapide |
-| Éveil (Chi) | `E` ou `Maj` | toucher le bouton ☯ |
+| Diriger la troupe | `←` `→` ou `Q` `D` | boutons **◀ ▶** en bas, ou glisser le doigt sur la piste |
+| Capacité de style | `Espace` | toucher l'**anneau de style** (en bas à gauche), ou tap bref sur la piste |
+| Éveil (Chi) | `E` ou `Maj` | toucher le bouton **☯** (en bas à droite) |
 | Changer de style | `1` `2` `3` `4` *(playtest)* | ramasser les jetons |
 | Pause | `Échap` ou `P` | bouton ⏸ |
+
+### Sur téléphone
+
+Le jeu se joue en portrait et remplit tout l'écran. Le bouton **📲 Installer**
+du menu l'ajoute à l'écran d'accueil : il s'ouvre ensuite en plein écran, comme
+une application, et fonctionne hors-ligne (un service worker garde les fichiers
+en cache). Sur Android/Chrome c'est l'invite d'installation native ; sur iOS,
+Safari ne l'autorise pas aux sites, le bouton affiche donc la marche à suivre
+(Partager → « Sur l'écran d'accueil »).
+
+Si quelque chose ne répond pas sur ton appareil, ouvre l'adresse suivie de
+`?debug` : un panneau en bas à gauche affiche le moteur de rendu, le framerate,
+les dimensions et le dernier événement tactile reçu — de quoi décrire
+précisément le problème.
 
 ### La roue des styles
 
@@ -39,7 +53,8 @@ Le dépôt est **déjà prêt à être servi tel quel depuis la racine de `main`
 pas de build, pas de bundler, pas de dépendance externe au moment de
 l'exécution (Phaser 3 est embarqué dans `vendor/`).
 
-1. Fusionne la branche de développement dans `main`.
+1. Fusionne la branche de développement dans `main` (ou publie directement la
+   branche de développement, ce qui fonctionne tout aussi bien).
 2. Dans GitHub : **Settings → Pages**
    - *Source* : **Deploy from a branch**
    - *Branch* : **`main`** — dossier **`/ (root)`**
@@ -88,6 +103,8 @@ python3 -m http.server 8000
 
 ```
 index.html            page unique, charge Phaser puis src/main.js
+manifest.json, sw.js  installation sur l'écran d'accueil et jeu hors-ligne
+icons/                icônes de l'application (générées)
 vendor/phaser.min.js  Phaser 3.80.1 embarqué (MIT)
 src/
   main.js             configuration du jeu

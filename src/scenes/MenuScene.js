@@ -83,9 +83,22 @@ export class MenuScene extends Phaser.Scene {
 
     this.add.text(W / 2, H * 0.85,
       IS_TOUCH
-        ? 'glisse le doigt pour diriger   ·   tap : capacité   ·   ☯ : Éveil'
+        ? '◀ ▶ ou glisse pour diriger   ·   anneau : capacité   ·   ☯ : Éveil'
         : '← →  ou glisse   ·   ESPACE  capacité   ·   E  Éveil',
       body(14, '#94a3b8')).setOrigin(0.5);
+
+    // --- installation sur l'écran d'accueil ---
+    // Caché une fois installé (mode standalone) : le bouton n'a plus de sens.
+    const standalone = typeof window.__isStandalone === 'function' && window.__isStandalone();
+    if (!standalone) {
+      this.installBtn = makeButton(this, 118, 34, 200, 44, '📲 Installer', {
+        fill: 0x0f172a, color: '#a7f3d0', fontSize: 17, radius: 14,
+        onClick: () => {
+          Audio.sfx('ui');
+          if (typeof window.__requestInstall === 'function') window.__requestInstall();
+        },
+      });
+    }
 
     // --- roue des styles ---
     const wheelY = H * 0.905;

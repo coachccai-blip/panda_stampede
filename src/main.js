@@ -39,14 +39,55 @@ const config = {
     powerPreference: 'high-performance',
   },
   input: {
-    activePointers: 2,
+    // Phaser réserve le pointeur 0 à la souris : avec 2, un seul doigt était
+    // reconnu et un second (Chi pendant qu'on pilote) était ignoré.
+    activePointers: 4,
+    // Sur téléphone, un léger appui puis relâchement doit rester un tap.
+    touch: { capture: true },
   },
   scene: [BootScene, MenuScene, RunScene, DojoScene, ResultScene],
 };
 
 const game = new Phaser.Game(config);
 
+// Phaser convertit les coordonnées d'un toucher à partir d'un rectangle de
+// canvas mis en cache. Sur téléphone, ce rectangle bouge (barre d'adresse qui
+// se replie, encoche, rotation, clavier) sans toujours déclencher `resize` ;
+// un cache périmé décale alors tous les taps de plusieurs dizaines de pixels
+// et « plus aucun bouton ne répond ». On le rafraîchit juste avant que Phaser
+// ne lise l'événement — écoute en phase de capture, donc avant la sienne.
+const refreshBounds = () => { if (game.scale) game.scale.updateBounds(); };
+['touchstart', 'pointerdown', 'mousedown'].forEach((ev) =>
+  document.addEventListener(ev, refreshBounds, { capture: true, passive: true }));
+window.addEventListener('orientationchange', () => setTimeout(() => game.scale.refresh(), 250));
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => game.scale.refresh());
+}
+
 // Utile pour le playtest depuis la console du navigateur.
 window.PandaStampede = { game };
+
+// Diagnostic à l'écran (?debug) : ce qu'il faut pour comprendre un téléphone
+// qu'on n'a pas sous la main.
+if (window.__diag) {
+  const el = window.__diag;
+  let last = 'aucun';
+  ['touchstart', 'touchmove', 'touchend', 'pointerdown', 'pointerup'].forEach((ev) =>
+    document.addEventListener(ev, (e) => {
+      const t = e.touches && e.touches[0] ? e.touches[0] : e;
+      last = `${ev} @ ${Math.round(t.clientX || 0)},${Math.round(t.clientY || 0)}`;
+    }, { capture: true, passive: true }));
+  setInterval(() => {
+    const r = game.canvas.getBoundingClientRect();
+    const b = game.scale.canvasBounds;
+    const sc = game.scene.getScenes(true).map((s) => s.scene.key).join(',');
+    const inset = getComputedStyle(document.getElementById('game')).paddingTop;
+    el.textContent =
+      `rendu ${game.renderer.type === Phaser.WEBGL ? 'WebGL' : 'Canvas'}  ${Math.round(game.loop.actualFps)} fps  scène ${sc}\n` +
+      `jeu ${game.config.width}x${game.config.height}  écran ${window.innerWidth}x${window.innerHeight}  dpr ${window.devicePixelRatio}\n` +
+      `canvas réel ${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)}  cache ${Math.round(b.x)},${Math.round(b.y)}\n` +
+      `encoche haut ${inset}  tactile ${navigator.maxTouchPoints}  dernier ${last}`;
+  }, 250);
+}
 
 export default game;

@@ -63,7 +63,9 @@ function setHover(scene, on, wasOn) {
 
 export function makeClickable(scene, obj, onClick, opts = {}) {
   const pad = opts.pad || 0;
-  let pressed = false;
+  // Identifiant du pointeur qui a appuyé : à deux doigts, seul le relâchement
+  // de CE doigt valide le bouton — pas celui qui pilote la troupe à côté.
+  let pressedId = null;
   let hovering = false;
 
   const rect = () => {
@@ -79,16 +81,19 @@ export function makeClickable(scene, obj, onClick, opts = {}) {
 
   const onDown = (p) => {
     if (!inside(p)) return;
-    pressed = true;
-    // Marque le pointeur comme consommé : la scène de jeu ne doit pas
-    // interpréter un appui sur un bouton du HUD comme un ordre de direction.
-    p.uiHandled = true;
+    pressedId = p.id;
+    // Marque CE geste comme consommé par l'interface, pour que la scène de jeu
+    // n'interprète pas l'appui comme un ordre de direction. On l'attache à
+    // l'horodatage de l'appui et non au pointeur : Phaser réutilise le même
+    // objet Pointer pour tous les touchers d'un téléphone, et un drapeau qui
+    // resterait collé bloquerait tout pilotage après le premier tap du menu.
+    p.uiHandledAt = p.downTime;
     if (opts.onPress) opts.onPress();
   };
 
   const onUp = (p) => {
-    if (!pressed) return;
-    pressed = false;
+    if (pressedId === null || p.id !== pressedId) return;
+    pressedId = null;
     if (opts.onRelease) opts.onRelease();
     if (inside(p)) onClick(p);
   };
@@ -105,7 +110,11 @@ export function makeClickable(scene, obj, onClick, opts = {}) {
 
   scene.input.on('pointerdown', onDown);
   scene.input.on('pointerup', onUp);
-  scene.input.on('pointerupoutside', () => { pressed = false; if (opts.onRelease) opts.onRelease(); });
+  scene.input.on('pointerupoutside', (p) => {
+    if (pressedId === null || (p && p.id !== pressedId)) return;
+    pressedId = null;
+    if (opts.onRelease) opts.onRelease();
+  });
   scene.input.on('pointermove', onMove);
 
   obj.once('destroy', () => {

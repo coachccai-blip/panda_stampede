@@ -122,7 +122,15 @@ export class RunScene extends Phaser.Scene {
     // --- rendu & UI ---
     const quality = save.quality === 'low' ? 'low' : 'high';
     this.renderer = new WorldRenderer(this, this.biome, quality);
-    this.hud = new HUD(this, { onChi: () => this.useChi() });
+    this.hud = new HUD(this, {
+      onChi: () => this.useChi(),
+      onAbility: () => this.useAbility(),
+      onSteer: (dir) => {
+        if (this.paused || this.phase === 'over') return;
+        Audio.resume();
+        this.panda.nudge(dir, this.currentHalf(), this.biome.laneCount);
+      },
+    });
     this.preview = new ChoiceGatePreview(this);
     this.hud.onPause = () => this.togglePause();
 
@@ -194,33 +202,43 @@ export class RunScene extends Phaser.Scene {
       });
     });
 
+    // Pilotage au doigt : le premier doigt posé sur la piste dirige la troupe.
+    // On mémorise SON identifiant : un second doigt (Chi, flèches) ne doit ni
+    // prendre le relais ni faire sauter la visée.
     this.dragging = false;
+    this.dragPointerId = null;
     this.pointerDownAt = 0;
     this.pointerMoved = 0;
     this.input.on('pointerdown', (p) => {
       Audio.resume();
       if (this.paused || this.phase === 'over') return;
-      // Un appui déjà consommé par un bouton du HUD (Chi, pause) ne doit pas
-      // être réinterprété comme un ordre de direction.
-      if (p.uiHandled) return;
+      // Un appui consommé par un bouton du HUD (même geste, même horodatage)
+      // ne doit pas être réinterprété comme un ordre de direction.
+      if (p.uiHandledAt === p.downTime) return;
+      if (this.dragging) return;
       this.dragging = true;
+      this.dragPointerId = p.id;
       this.pointerDownAt = this.time.now;
       this.pointerMoved = 0;
       this.dragOriginX = p.x;
       this.dragOriginTarget = this.panda.targetX;
     });
     this.input.on('pointermove', (p) => {
-      if (!this.dragging) return;
+      if (!this.dragging || p.id !== this.dragPointerId) return;
       const dx = p.x - this.dragOriginX;
       this.pointerMoved = Math.max(this.pointerMoved, Math.abs(dx));
       this.panda.aimAt(this.dragOriginTarget + dx * 1.3, this.currentHalf());
     });
-    this.input.on('pointerup', () => {
-      if (this.dragging && this.pointerMoved < 14 && this.time.now - this.pointerDownAt < 260) {
+    const endDrag = (p) => {
+      if (!this.dragging || (p && p.id !== this.dragPointerId)) return;
+      if (this.pointerMoved < 14 && this.time.now - this.pointerDownAt < 260) {
         this.useAbility();
       }
       this.dragging = false;
-    });
+      this.dragPointerId = null;
+    };
+    this.input.on('pointerup', endDrag);
+    this.input.on('pointerupoutside', endDrag);
   }
 
   useAbility() {
@@ -247,7 +265,7 @@ export class RunScene extends Phaser.Scene {
     this.hints = [];
     if (!this.biome.tutorial || this.save.seenTutorial || this.mode !== 'story') return;
     this.hints = [
-      { at: 420, text: IS_TOUCH ? 'Glisse le doigt' : '← → ou glisse', sub: 'ta troupe suit ton doigt' },
+      { at: 420, text: IS_TOUCH ? '◀ ▶ ou glisse le doigt' : '← → ou glisse', sub: 'ta troupe suit ton doigt' },
       { at: 1500, text: 'Traverse les portes vertes', sub: 'elles grossissent ton armée' },
       { at: 2700, text: '⚔ écrase · 🤝 rallie', sub: 'les chiffres affichés sont ton vrai choix' },
       { at: 4400, text: 'Ramasse les jetons de style', sub: '🎋 bat 🔥 · 🔥 bat 🌪️ · 💧 bat 🎋 · 🌪️ bat 💧' },
@@ -984,7 +1002,7 @@ export class RunScene extends Phaser.Scene {
       body(16, '#cbd5e1')).setOrigin(0.5);
     const controls = this.add.text(W / 2, H * 0.345,
       IS_TOUCH
-        ? 'glisse pour diriger   ·   tap : capacité   ·   ☯ : Éveil'
+        ? '◀ ▶ ou glisse : diriger   ·   anneau de style : capacité   ·   ☯ : Éveil'
         : '← →  diriger   ·   ESPACE  capacité   ·   E  Éveil',
       body(14, '#94a3b8')).setOrigin(0.5);
 
